@@ -1,0 +1,154 @@
+Sub Filter_()
+On Error Resume Next
+
+Dim sht As Worksheet
+
+Set sht = ThisWorkbook.Worksheets("Trades")
+
+sht.Range("$A$1:$W$80284").AutoFilter Field:=3, Criteria1:= _
+        "~*Leonteq Securities AG Amsterdam"
+
+sht.Range("A2:Z80284").SpecialCells(xlCellTypeVisible).EntireRow.Delete
+
+If sht.AutoFilterMode Then sht.AutoFilterMode = False
+
+
+
+
+
+
+Dim PCache As PivotCache
+Dim PTable As PivotTable
+Dim PRange As Range
+Dim LastRow As Long
+Dim LastCol As Long
+
+
+
+LastRow = sht.Cells(Rows.Count, 1).End(xlUp).Row
+LastCol = sht.Cells(1, Columns.Count).End(xlToLeft).Column
+Set PRange = sht.Cells(1, 1).Resize(LastRow, LastCol)
+
+Dim pt As Worksheet
+Set pt = ThisWorkbook.Sheets.Add
+pt.Name = "PSheet"
+
+Set PCache = ActiveWorkbook.PivotCaches.Create _
+(SourceType:=xlDatabase, SourceData:=PRange). _
+CreatePivotTable(TableDestination:=pt.Cells(1, 1), _
+TableName:="MTMZero")
+
+Set PTable = PCache.CreatePivotTable _
+(TableDestination:=pt.Cells(1, 1), TableName:="MTMZero")
+
+With pt.PivotTables("MTMZero").PivotFields("Instrument")
+.Orientation = xlRowField
+.Position = 1
+End With
+
+With pt.PivotTables("MTMZero").PivotFields("Quantity")
+.Orientation = xlDataField
+.Position = 1
+.Function = xlSum
+.NumberFormat = "#,##0"
+.Name = "Quantity"
+End With
+
+Dim ws As Worksheet
+Set ws = ThisWorkbook.Sheets.Add
+ws.Name = "FilterMTM"
+
+pt.Range("A1:B50000").Copy
+
+ws.Range("A1").PasteSpecial xlPasteValues
+
+ws.Range("$A$1:$B$45000").AutoFilter Field:=2, Criteria1:="=0"
+
+ws.Range("$A$1:$B$45000").Copy
+
+Dim ws2 As Worksheet
+Set ws2 = ThisWorkbook.Sheets.Add
+ws2.Name = "FilterMTM2"
+
+ws2.Range("A1").PasteSpecial xlPasteValues
+
+ws2.Range("B2").Select
+ActiveCell.Value = "Yes"
+Selection.AutoFill Destination:=Range("B2:B" & Range("A" & Rows.Count).End(xlUp).Row)
+
+
+sht.Columns("I:J").Insert Shift:=xlToRight, _
+      CopyOrigin:=xlFormatFromLeftOrAbove
+
+sht.Range("$I$2:$I$50000").Formula = "=VLOOKUP(Trades!A2,FilterMTM2!$A$1:$B$50000,2,FALSE)"
+
+With sht.Range("$A$1:$W$80284")
+
+.AutoFilter Field:=9, Criteria1:="Yes"
+
+.AutoFilter Field:=18, Criteria1:="<>0"
+
+End With
+
+sht.Range("$A$2:$A$80284").SpecialCells(xlCellTypeVisible).Copy
+ws2.Range("D1").PasteSpecial xlPasteValues
+
+ws2.Range("E1").Select
+ActiveCell.Value = "No"
+Selection.AutoFill Destination:=Range("E1:E" & Range("D" & Rows.Count).End(xlUp).Row)
+
+If sht.AutoFilterMode Then sht.AutoFilterMode = False
+
+
+sht.Range("$J$2:$J$50000").Formula = "=VLOOKUP(Trades!A2,FilterMTM2!$D$1:$E$50000,2,FALSE)"
+
+
+'Start
+
+Dim lr As Long
+lr = sht.Range("A" & Rows.Count).End(xlUp).Row
+For i = 1 To lr
+If sht.Cells(i, 1).Value = "OTC CE USDJPY 191216" Then
+sht.Cells(i, 9).Value = "No"
+End If
+Next i
+
+Dim kr As Long
+kr = sht.Range("P" & Rows.Count).End(xlUp).Row
+For i = 1 To kr
+If sht.Cells(i, 16).Value = "2/1/1906" Then
+sht.Cells(i, 16).Value = "01/07/2020"
+End If
+Next i
+
+
+sht.Range("$A$1:$W$80284").AutoFilter Field:=10, Criteria1:= _
+        "No"
+
+Dim jr As Long
+jr = sht.Range("I" & Rows.Count).End(xlUp).Row
+sht.Range("$I$2:$I$50000").SpecialCells(xlCellTypeVisible).Value = "No"
+
+If sht.AutoFilterMode Then sht.AutoFilterMode = False
+
+sht.Range("$A$1:$W$80284").AutoFilter Field:=9, Criteria1:= _
+        "Yes"
+
+sht.Range("A2:Z80284").SpecialCells(xlCellTypeVisible).EntireRow.Delete
+
+
+If sht.AutoFilterMode Then sht.AutoFilterMode = False
+
+
+sht.Range("I:I", "J:J").Delete
+
+Application.DisplayAlerts = False
+
+pt.Delete
+ws.Delete
+ws2.Delete
+
+
+
+'End
+End Sub

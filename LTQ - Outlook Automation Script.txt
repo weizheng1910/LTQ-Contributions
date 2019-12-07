@@ -1,0 +1,75 @@
+
+'1) Define Sheets
+
+Dim sht As Worksheet
+Dim sht2 As Worksheet 
+
+Set sht = ActiveWorkbook.Worksheets("BOSS")
+Set sht2 = ActiveWorkbook.Worksheets("Add")
+
+'2) Define the Table, which is to be copied after it is filtered 
+
+LastRow = sht.Cells(Rows.Count, 1).End(xlUp).Row
+LastCol = sht.Cells(1, Columns.Count).End(xlToLeft).Column
+Set myTable = sht.Cells(1, 1).Resize(LastRow, LastCol).SpecialCells(xlCellTypeVisible)
+ 
+'3) Border the Table
+
+With myTable.Borders 
+ .InsideLineStyle = wdLineStyleSingle 
+ .OutsideLineStyle = wdLineStyleDouble 
+End With
+
+'4) Defining and Creating Outlook Mail
+
+Dim objOutlookApp As Outlook.Application
+    Dim objNewEmail As Outlook.MailItem
+
+Set objOutlookApp = CreateObject("Outlook.Application")
+    Set objNewEmail = objOutlookApp.CreateItem(olMailItem)
+
+
+'** Reference to the first visible cell, cpty, below Counterparty Name of the Filter
+
+Dim cpty As Range
+sht.Range("A1").Select
+Set cpty = sht.Range("A2:A" & Rows.Count).SpecialCells(xlCellTypeVisible).Cells(1, 1)
+
+'**.To will be a Vlookup reference the email address from the CounterpartyName 
+
+Dim myVLookupResult As String
+Dim cptyadd As String
+cptyadd = cpty.Value
+
+myVLookupResult = WorksheetFunction.VLookup(cptyadd, sht2.Range("A1:B5"), 2, False)
+
+
+With objNewEmail
+.To = myVlookupResult
+.CC = "otc.confirmations@leonteq.com"
+.Subject ="Outstanding Confirmations (LTQ - "&cptyadd&")"
+
+'** .Display is inserted here so that WordEditor can paste the excel sheet in
+
+.Display 
+
+'** Setting up WordEditor
+
+Set xInspect = objNewEmail.GetInspector
+Set pageEditor = XInspect.WordEditor
+
+'** myTable Copy
+
+myTable.Copy
+
+'** myTable Paste
+
+pageEditor.Application.Selection.Start = Len(.Body)
+pageEditor.Application.Selection.End = pageEditor.Application.Selection.Start
+pageEditor.Application.Selection.PasteAndFormat (wdFormatPlainText)
+
+
+
+Set pageEditor = Nothing 
+
+End With
